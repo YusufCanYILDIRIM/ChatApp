@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './Login.css';
 
 function Login({ onLogin }) {
@@ -8,8 +8,14 @@ function Login({ onLogin }) {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  // Varsayılan test kullanıcısı bilgilerini ayarlayalım
+  useEffect(() => {
+    // Form development kolaylığı için
+    setEmail('demo@example.com');
+    setPassword('demo123');
+  }, []);
 
-  // handleSubmit fonksiyonunu güncelle
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -52,7 +58,7 @@ function Login({ onLogin }) {
       
     } catch (error) {
       console.error('Giriş hatası detayları:', error);
-      setError(error.message);
+      setError(error.message || 'Giriş yapılamadı, lütfen tekrar deneyin.');
     } finally {
       setLoading(false);
     }
@@ -114,7 +120,13 @@ function Login({ onLogin }) {
               <label className="remember-me">
                 <input type="checkbox" /> Beni hatırla
               </label>
-              <a href="#" className="forgot-password">Şifremi unuttum</a>
+              <button 
+                type="button" 
+                className="forgot-password-btn"
+                onClick={() => alert('Şifre sıfırlama henüz aktif değil')}
+              >
+                Şifremi unuttum
+              </button>
             </div>
           )}
           

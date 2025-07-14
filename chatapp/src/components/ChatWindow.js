@@ -15,11 +15,59 @@ function ChatWindow({ activeChat, chatData }) {
     return <div className="no-chat-selected">Sohbet seçin veya yeni bir sohbet başlatın</div>;
   }
 
+  // Sohbet verilerini analiz et
+  const getChatInfo = () => {
+    // Backend API'den gelen veri yapısı (participants dizisi var)
+    if (chatData.participants && chatData.participants.length > 0) {
+      const participant = chatData.participants[0];
+      return {
+        name: participant.name || "İsimsiz Kullanıcı",
+        profileImage: participant.profileImage,
+        online: false,
+        lastSeen: "Bilinmiyor"
+      };
+    } 
+    // Mock veri yapısı (doğrudan name özelliği var)
+    else {
+      return {
+        name: chatData.name || "Bilinmeyen Kullanıcı",
+        profileImage: chatData.profileImage,
+        online: chatData.online || false,
+        lastSeen: chatData.lastSeen || "Bilinmiyor"
+      };
+    }
+  };
+
+  const { name, profileImage, online, lastSeen } = getChatInfo();
+
+  // Mesajları formatla
+  const formatMessages = () => {
+    if (!chatData.messages) return [];
+    
+    return chatData.messages.map((msg, index) => ({
+      id: msg.id || `msg-${index}`,
+      sender: msg.sender,
+      text: msg.text,
+      time: msg.time || formatTime(msg.timestamp)
+    }));
+  };
+
+  // Zaman formatı
+  const formatTime = (timestamp) => {
+    if (!timestamp) return "";
+    
+    // Basit formatlama
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+  };
+
+  const messages = formatMessages();
+
   const handleSend = (e) => {
     e.preventDefault();
     if (message.trim()) {
       // Mesaj gönderme işlemi buraya gelecek
-      console.log(`Sending message to ${chatData.name}: ${message}`);
+      console.log(`Sending message to ${name}: ${message}`);
       setMessage('');
     }
   };
@@ -29,15 +77,15 @@ function ChatWindow({ activeChat, chatData }) {
       <div className="chat-header">
         <div className="chat-user-info">
           <div className="avatar">
-            {chatData.profileImage ? (
-              <img src={chatData.profileImage} alt={chatData.name} />
+            {profileImage ? (
+              <img src={profileImage} alt={name} />
             ) : (
-              <div className="avatar-placeholder">{chatData.name[0]}</div>
+              <div className="avatar-placeholder">{name[0] || '?'}</div>
             )}
           </div>
           <div>
-            <h3>{chatData.name}</h3>
-            <span className="status">{chatData.online ? 'Çevrimiçi' : 'Son görülme: ' + chatData.lastSeen}</span>
+            <h3>{name}</h3>
+            <span className="status">{online ? 'Çevrimiçi' : 'Son görülme: ' + lastSeen}</span>
           </div>
         </div>
         <div className="chat-actions">
@@ -48,9 +96,9 @@ function ChatWindow({ activeChat, chatData }) {
       </div>
       
       <div className="messages-container">
-        {chatData.messages.map((msg, index) => (
+        {messages.map((msg, index) => (
           <div 
-            key={index} 
+            key={msg.id || index} 
             className={`message ${msg.sender === 'me' ? 'sent' : 'received'}`}
           >
             <div className="message-content">

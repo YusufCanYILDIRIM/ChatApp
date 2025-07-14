@@ -64,7 +64,7 @@ router.post('/login', async (req, res) => {
   try {
     console.log('Login request received');
     const { email, password } = req.body;
-    console.log('Login attempt for:', email);
+    console.log(`Login attempt for: "${email}" with password: "${password}"`);
     
     // Kullanıcıyı bul
     const user = users.find(user => user.email === email);
@@ -72,10 +72,13 @@ router.post('/login', async (req, res) => {
       console.log('User not found:', email);
       return res.status(404).json({ message: "Kullanıcı bulunamadı!" });
     }
-    console.log('User found:', user.id);
+    console.log('User found:', user.id, user.name);
     
     // Şifreyi kontrol et
     console.log('Comparing password...');
+    console.log('Input password:', password);
+    console.log('Stored hash:', user.password);
+    
     const isPasswordValid = await bcrypt.compare(password, user.password);
     console.log('Password valid:', isPasswordValid);
     
@@ -83,11 +86,13 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ message: "Geçersiz şifre!" });
     }
     
-    // Token oluştur
-    console.log('Creating token with secret:', process.env.JWT_SECRET ? 'Secret exists' : 'No secret!');
+    // Token oluştur - fallback key kullanıldığından emin olun
+    const secretKey = process.env.JWT_SECRET || 'fallback_secret_key';
+    console.log('Creating token with secret key:', secretKey.substring(0, 5) + '...');
+    
     const token = jwt.sign(
       { id: user.id, email: user.email },
-      process.env.JWT_SECRET || 'fallback_secret_key',
+      secretKey,
       { expiresIn: '24h' }
     );
     
