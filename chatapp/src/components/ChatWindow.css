@@ -1,0 +1,132 @@
+.chat-window {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  flex: 1;
+}
+
+.no-chat-selected {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: 18px;
+  color: #8696a0;
+  background-color: #f0f2f5;
+}
+
+.chat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  background-color: #f0f2f5;
+  border-bottom: 1px solid #e6e6e6;
+}
+
+.chat-user-info {
+  display: flex;
+  align-items: center;
+}
+
+.chat-user-info .avatar {
+  width: 40px;
+  height: 40px;
+  margin-right: 15px;
+}
+
+.chat-user-info h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.status {
+  font-size: 12px;
+  color: #667781;
+}
+
+.chat-actions {
+  display: flex;
+}
+
+.icon-button {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #54656f;
+  margin-left: 10px;
+  cursor: pointer;
+}
+
+.messages-container {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+  background-color: #efeae2;
+  background-image: url('https://web.whatsapp.com/img/bg-chat-tile_9e8a2898faedb7db9bf5638405cf81ae.png');
+}
+
+.message {
+  display: flex;
+  margin-bottom: 10px;
+}
+
+.message.sent {
+  justify-content: flex-end;
+}
+
+.message-content {
+  padding: 8px 12px;
+  border-radius: 7.5px;
+  max-width: 65%;
+  position: relative;
+  word-wrap: break-word;
+}
+
+.message.sent .message-content {
+  background-color: #dcf8c6;
+}
+
+.message.received .message-content {
+  background-color: white;
+}
+
+.message-time {
+  font-size: 11px;
+  color: #8696a0;
+  display: block;
+  text-align: right;
+  margin-top: 4px;
+}
+
+.message-input-container {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  background-color: #f0f2f5;
+}
+
+.message-input-container input {
+  flex: 1;
+  padding: 10px 15px;
+  border-radius: 20px;
+  border: none;
+  font-size: 15px;
+  margin: 0 10px;
+}
+
+.send-button {
+  background-color: #25D366;
+  color: white;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.send-button:disabled {
+  background-color: #e1e1e1;
+  cursor: default;
+}
