@@ -1,8 +1,6 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
-const { v4: uuidv4 } = require('uuid');
-const { users } = require('../data/users');
+const User = require('../models/User');
 
 const router = express.Router();
 
@@ -13,41 +11,34 @@ router.post('/register', async (req, res) => {
     console.log('Register attempt:', email);
     
     // Email kontrol
-    if (users.find(user => user.email === email)) {
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
       return res.status(400).json({ message: "Bu email zaten kullanılıyor!" });
     }
     
-    // Şifre hashleme
-    const hashedPassword = await bcrypt.hash(password, 10);
-    console.log('Password hashed');
-    
-    // Yeni kullanıcı
-    const newUser = {
-      id: uuidv4(),
+    // Yeni kullanıcı oluştur (pre-save hook şifreyi otomatik hashleyecek)
+    const newUser = new User({
       name,
       email,
-      password: hashedPassword,
-      profileImage: null,
-      createdAt: new Date().toISOString()
-    };
+      password
+    });
     
     // Kullanıcıyı kaydet
-    users.push(newUser);
-    console.log('User added:', newUser.id);
+    await newUser.save();
+    console.log('User added:', newUser._id);
     
     // Token oluştur
     const token = jwt.sign(
-      { id: newUser.id, email: newUser.email },
+      { id: newUser._id, email: newUser.email },
       process.env.JWT_SECRET || 'fallback_secret_key',
       { expiresIn: '24h' }
     );
-    console.log('Token created');
     
     res.status(201).json({
       message: "Kullanıcı başarıyla oluşturuldu",
       token,
       user: {
-        id: newUser.id,
+        id: newUser._id,
         name: newUser.name,
         email: newUser.email,
         profileImage: newUser.profileImage
@@ -62,46 +53,38 @@ router.post('/register', async (req, res) => {
 // Giriş yap
 router.post('/login', async (req, res) => {
   try {
-    console.log('Login request received');
     const { email, password } = req.body;
-    console.log(`Login attempt for: "${email}" with password: "${password}"`);
+    console.log('Login attempt for:', email);
     
-    // Kullanıcıyı bul
-    const user = users.find(user => user.email === email);
+    // Kullanıcıyı email ile bul
+    const user = await User.findOne({ email });
     if (!user) {
-      console.log('User not found:', email);
       return res.status(404).json({ message: "Kullanıcı bulunamadı!" });
     }
-    console.log('User found:', user.id, user.name);
     
     // Şifreyi kontrol et
-    console.log('Comparing password...');
-    console.log('Input password:', password);
-    console.log('Stored hash:', user.password);
-    
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    console.log('Password valid:', isPasswordValid);
-    
+    const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
       return res.status(401).json({ message: "Geçersiz şifre!" });
     }
     
-    // Token oluştur - fallback key kullanıldığından emin olun
-    const secretKey = process.env.JWT_SECRET || 'fallback_secret_key';
-    console.log('Creating token with secret key:', secretKey.substring(0, 5) + '...');
+    // Kullanıcıyı çevrimiçi yap ve son görülme zamanını güncelle
+    user.isOnline = true;
+    user.lastSeen = Date.now();
+    await user.save();
     
+    // Token oluştur
     const token = jwt.sign(
-      { id: user.id, email: user.email },
-      secretKey,
+      { id: user._id, email: user.email },
+      process.env.JWT_SECRET || 'fallback_secret_key',
       { expiresIn: '24h' }
     );
     
-    console.log('Login successful, token created');
     res.status(200).json({
       message: "Giriş başarılı",
       token,
       user: {
-        id: user.id,
+        id: user._id,
         name: user.name,
         email: user.email,
         profileImage: user.profileImage
@@ -114,9 +97,8 @@ router.post('/login', async (req, res) => {
 });
 
 // Token kontrol
-router.post('/verify-token', (req, res) => {
+router.post('/verify-token', async (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
-  console.log('Verifying token:', token ? 'Token exists' : 'No token');
   
   if (!token) {
     return res.status(403).json({ valid: false });
@@ -127,7 +109,13 @@ router.post('/verify-token', (req, res) => {
       token, 
       process.env.JWT_SECRET || 'fallback_secret_key'
     );
-    console.log('Token valid, user:', decoded.id);
+    
+    // Kullanıcı hala veritabanında mevcut mu kontrol et
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      return res.status(404).json({ valid: false, message: "Kullanıcı bulunamadı" });
+    }
+    
     res.status(200).json({ valid: true, userId: decoded.id });
   } catch (err) {
     console.error('Token verification error:', err);

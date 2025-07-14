@@ -89,6 +89,85 @@ function App() {
     setActiveChat(null);
   };
 
+  // Yeni bir fonksiyon ekleyin - gönderilen mesajı yerel state'e kaydetmek için
+  const updateLocalMessages = (chatId, newMessage) => {
+    setConversations(prevConversations => 
+      prevConversations.map(conv => {
+        if (conv.id === chatId) {
+          // Sohbetteki mesajlar dizisi yoksa oluşturalım
+          const messages = conv.messages || [];
+          
+          return {
+            ...conv,
+            messages: [...messages, newMessage],
+            // Son mesaj bilgilerini de güncelleyelim
+            lastMessage: {
+              text: newMessage.text,
+              sender: newMessage.sender,
+              timestamp: new Date().toISOString()
+            },
+            updatedAt: new Date().toISOString()
+          };
+        }
+        return conv;
+      })
+    );
+  };
+
+  // sendMessage fonksiyonunu güncelleyin
+  const sendMessage = async (chatId, messageText) => {
+    try {
+      const token = localStorage.getItem('chatAppToken');
+      
+      // Önce yerel mesaj objesi oluştur
+      const newMessage = {
+        id: `temp-${Date.now()}`,
+        sender: user.id,
+        text: messageText,
+        timestamp: new Date().toISOString()
+      };
+      
+      // Yerel state'i güncelle
+      updateLocalMessages(chatId, newMessage);
+      
+      // Sonra API'ye gönder
+      const response = await fetch(`http://localhost:5000/api/chats/${chatId}/messages`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ text: messageText })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Mesaj gönderilirken bir hata oluştu');
+      }
+      
+      const sentMessage = await response.json();
+      
+      // Temp mesajı gerçek ID ile güncelle
+      setConversations(prevConversations => 
+        prevConversations.map(conv => {
+          if (conv.id === chatId) {
+            return {
+              ...conv,
+              messages: conv.messages.map(msg => 
+                msg.id === newMessage.id ? {...msg, id: sentMessage.id} : msg
+              )
+            };
+          }
+          return conv;
+        })
+      );
+      
+      return sentMessage;
+    } catch (error) {
+      console.error('Mesaj gönderme hatası:', error);
+      throw error;
+    }
+  };
+
   if (loading) {
     return (
       <div className="loading-container">
@@ -167,6 +246,7 @@ function App() {
         activeChat={activeChat} 
         chatData={activeChatData}
         user={user}
+        sendMessage={sendMessage} // Bu prop'u geçtiğinizden emin olun
       />
     </div>
   );

@@ -1,15 +1,30 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './ChatWindow.css';
 
-function ChatWindow({ activeChat, chatData }) {
+function ChatWindow({ activeChat, chatData, user, sendMessage }) {
   const [message, setMessage] = useState('');
+  const [messages, setMessages] = useState([]);
+  const [sending, setSending] = useState(false);
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ 
+        behavior: "smooth", 
+        block: "end" 
+      });
+    }
   };
 
-  useEffect(scrollToBottom, [chatData?.messages]);
+  // Mevcut mesajları yükle
+  useEffect(() => {
+    if (chatData?.messages) {
+      setMessages(formatMessages());
+    }
+  }, [chatData]);
+
+  // Mesajlar değiştiğinde otomatik kaydır
+  useEffect(scrollToBottom, [messages]);
 
   if (!chatData) {
     return <div className="no-chat-selected">Sohbet seçin veya yeni bir sohbet başlatın</div>;
@@ -46,7 +61,7 @@ function ChatWindow({ activeChat, chatData }) {
     
     return chatData.messages.map((msg, index) => ({
       id: msg.id || `msg-${index}`,
-      sender: msg.sender,
+      sender: msg.sender === user?.id ? 'me' : 'other',
       text: msg.text,
       time: msg.time || formatTime(msg.timestamp)
     }));
@@ -61,14 +76,40 @@ function ChatWindow({ activeChat, chatData }) {
     return date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
   };
 
-  const messages = formatMessages();
-
-  const handleSend = (e) => {
+  const handleSend = async (e) => {
     e.preventDefault();
-    if (message.trim()) {
-      // Mesaj gönderme işlemi buraya gelecek
-      console.log(`Sending message to ${name}: ${message}`);
+    
+    if (!message.trim()) return;
+    
+    setSending(true);
+    
+    try {
+      // Mesajı önbelleğe al ve temizle
+      const messageToSend = message;
       setMessage('');
+      
+      // Yerel UI'ı güncelleyerek kullanıcıya hızlı geri bildirim ver
+      const tempMessage = {
+        id: `temp-${Date.now()}`,
+        sender: 'me',
+        text: messageToSend,
+        time: formatTime(new Date())
+      };
+      
+      setMessages(prevMessages => [...prevMessages, tempMessage]);
+      
+      // Scroll işlemini zorla
+      setTimeout(() => scrollToBottom(), 50);
+      
+      // App.js'deki sendMessage fonksiyonunu kullanarak mesajı gönder
+      if (sendMessage) {
+        await sendMessage(activeChat, messageToSend);
+      }
+    } catch (error) {
+      console.error('Mesaj gönderme hatası:', error);
+      alert('Mesaj gönderilemedi: ' + error.message);
+    } finally {
+      setSending(false);
     }
   };
 
@@ -119,6 +160,7 @@ function ChatWindow({ activeChat, chatData }) {
           placeholder="Mesaj yazın..."
           value={message}
           onChange={(e) => setMessage(e.target.value)}
+          disabled={sending}
         />
         <button type="button" className="icon-button">
           <i className="fa fa-microphone"></i>
@@ -126,9 +168,9 @@ function ChatWindow({ activeChat, chatData }) {
         <button 
           type="submit" 
           className="send-button"
-          disabled={!message.trim()}
+          disabled={!message.trim() || sending}
         >
-          <i className="fa fa-paper-plane"></i>
+          <i className={sending ? "fa fa-spinner fa-spin" : "fa fa-paper-plane"}></i>
         </button>
       </form>
     </div>

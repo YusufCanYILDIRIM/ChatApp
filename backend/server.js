@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const connectDB = require('./db/mongoose');
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const chatRoutes = require('./routes/chats');
@@ -8,6 +9,9 @@ const { verifyToken } = require('./middleware/auth');
 
 // Environment variables
 dotenv.config();
+
+// MongoDB bağlantısını başlat
+connectDB();
 
 // Initialize express
 const app = express();
